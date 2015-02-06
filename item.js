@@ -112,6 +112,33 @@ var Item = Model.extend('Item', function() {
     }
   });
 
+  Object.defineProperty(this, 'isModified', {
+    get: function() {
+      return this._isModified;
+    },
+    set: function(val) {
+      this._isModified = val;
+    }
+  });
+
+  this.on('didCreateOrUnserializeItem', function() {
+    this.isModified = false;
+  });
+
+  this.onAsync('didLoad', function *() {
+    this.isNew = false;
+    this.isModified = false;
+  });
+
+  this.onAsync('didSave', function *() {
+    this.isNew = false;
+    this.isModified = false;
+  });
+
+  this.on('didChange', function() {
+    this.isModified = true;
+  });
+
   this.generateKeyValue = function(prop) {
     if (_.isString(prop)) prop = this.getProperty(prop);
     if (!prop) throw new Error('unknown property');

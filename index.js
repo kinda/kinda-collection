@@ -57,6 +57,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     if (this.fixedForeignKey) {
       item[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
+    item.emit('didCreateOrUnserializeItem');
     return item;
   }
 
@@ -67,7 +68,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var json = yield this.database.get(this.table, key, options);
     if (!json) return;
     item.replaceValue(json);
-    item.isNew = false;
     yield item.emitAsync('didLoad');
     return item;
   };
@@ -83,7 +83,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     if (item.isNew) options.errorIfExists = true;
     json = yield this.database.put(this.table, key, json, options);
     if (json) item.replaceValue(json);
-    item.isNew = false;
     yield item.emitAsync('didSave');
     return item;
   };
@@ -109,7 +108,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
       // TODO: like this.get, try to reuse the passed items instead of
       // building new one
       item = this.unserialize(item.value);
-      item.isNew = false;
       yield item.emitAsync('didLoad');
       return item;
     }, this);
@@ -121,7 +119,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var res = yield this.database.getRange(this.table, options);
     return yield res.map(function *(item) { // TODO: limit concurrency
       item = this.unserialize(item.value);
-      item.isNew = false;
       yield item.emitAsync('didLoad');
       return item;
     }, this);
