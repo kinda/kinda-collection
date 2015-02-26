@@ -68,7 +68,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var json = yield this.database.get(this.table, key, options);
     if (!json) return;
     item.replaceValue(json);
-    yield item.emitAsync('didLoad');
+    // yield item.emitAsync('didLoad'); // TODO: must be optimized
     return item;
   };
 
@@ -102,26 +102,31 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     items = items.map(this.normalizeItem.bind(this));
     options = this.normalizeOptions(options);
     var keys = _.invoke(items, 'getPrimaryKeyValue');
-    var res = yield this.database.getMany(this.table, keys, options);
-    return yield res.map(function *(item) {
-      // TODO: limit concurrency
+    var results = yield this.database.getMany(this.table, keys, options);
+    var items = [];
+    for (var i = 0; i < results.length; i++) {
       // TODO: like this.get, try to reuse the passed items instead of
       // building new one
-      item = this.unserialize(item.value);
-      yield item.emitAsync('didLoad');
-      return item;
-    }, this);
+      var result = results[i];
+      var item = this.unserialize(result.value);
+      // yield item.emitAsync('didLoad'); // TODO: must be optimized
+      items.push(item);
+    }
+    return items;
   };
 
   this.getRange = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    var res = yield this.database.getRange(this.table, options);
-    return yield res.map(function *(item) { // TODO: limit concurrency
-      item = this.unserialize(item.value);
-      yield item.emitAsync('didLoad');
-      return item;
-    }, this);
+    var results = yield this.database.getRange(this.table, options);
+    var items = [];
+    for (var i = 0; i < results.length; i++) {
+      var result = results[i];
+      var item = this.unserialize(result.value);
+      // yield item.emitAsync('didLoad'); // TODO: must be optimized
+      items.push(item);
+    }
+    return items;
   };
 
   this.getCount = function *(options) {
