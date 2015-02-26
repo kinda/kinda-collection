@@ -125,7 +125,7 @@ var Item = Model.extend('Item', function() {
     this.isModified = false;
   });
 
-  this.onAsync('didLoad', function *() {
+  this.on('didLoad', function() {
     this.isNew = false;
     this.isModified = false;
   });

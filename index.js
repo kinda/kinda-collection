@@ -68,7 +68,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var json = yield this.database.get(this.table, key, options);
     if (!json) return;
     item.replaceValue(json);
-    // yield item.emitAsync('didLoad'); // TODO: must be optimized
+    item.emit('didLoad');
     return item;
   };
 
@@ -109,7 +109,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
       // building new one
       var result = results[i];
       var item = this.unserialize(result.value);
-      // yield item.emitAsync('didLoad'); // TODO: must be optimized
+      item.emit('didLoad');
       items.push(item);
     }
     return items;
@@ -123,7 +123,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     for (var i = 0; i < results.length; i++) {
       var result = results[i];
       var item = this.unserialize(result.value);
-      // yield item.emitAsync('didLoad'); // TODO: must be optimized
+      item.emit('didLoad');
       items.push(item);
     }
     return items;
