@@ -135,6 +135,32 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     return yield this.database.getCount(this.table, options);
   };
 
+  this.delRange = function *(options) {
+    options = this.normalizeOptions(options);
+    yield this.forRange(options, function *(item) {
+      yield this.del(item, { errorIfMissing: false });
+    }, this);
+  };
+
+  this.forRange = function *(options, fn, thisArg) {
+    options = this.normalizeOptions(options);
+    options = _.clone(options);
+    options.limit = 250;
+    while (true) {
+      var items = yield this.getRange(options);
+      if (!items.length) break;
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        yield fn.call(thisArg, item);
+      }
+      var lastItem = _.last(items);
+      options.startAfter = this.makeRangeKey(lastItem, options);
+      delete options.start;
+      delete options.startBefore;
+      delete options.value;
+    };
+  };
+
   this.injectFixedForeignKey = function(options) {
     if (this.fixedForeignKey) {
       options = _.clone(options);
