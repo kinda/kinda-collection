@@ -82,8 +82,10 @@ var Item = Model.extend('Item', function() {
   this.addHasManyRelation = function(name, klass, foreignKey, options) {
     if (!options) options = {};
     options.type = 'hasMany';
+
     var relation = Relation.create(name, klass, foreignKey, options);
     this.getRelations()[name] = relation;
+
     Object.defineProperty(this, name, {
       get: function() {
         if (!this.hasOwnProperty('_relationValues'))
@@ -100,6 +102,13 @@ var Item = Model.extend('Item', function() {
         return val;
       },
       enumerable: true
+    });
+
+    this.onAsync('didDelete', function *() {
+      var items = yield this[name].getRange();
+      for (var i = 0; i < items.length; i++) {
+        yield items[i].del();
+      }
     });
   };
 
