@@ -1,3 +1,39 @@
+// frontend app
+
+var repository = RemoteRepository.create(config.api.url);
+
+var Users = Users.extend('Users', function() {
+  this.setRepository(repository);
+});
+
+// backend server
+
+var repository = DatabaseRepository.create(db);
+
+var Users = Users.extend('Users', function() {
+  this.setRepository(repository);
+});
+
+var server = RepositoryServer.create();
+server.addCollection(Users, { authorizer: authorizer })
+server.addCollection(Tokens, { authorizer: authorizer })
+api.use(server.getMiddleware());
+
+// ---
+
+this.createItem()
+this.unserializeItem()
+this.getItem()
+this.putItem()
+this.deleteItem()
+this.getItems()
+this.findItems()
+this.countItems()
+this.deleteItems()
+this.forItems()
+
+// -------------------------------------
+
 var db = require('../database');
 
 var Vaults = Collection.extend('Vaults', function() {

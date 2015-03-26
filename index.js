@@ -10,37 +10,35 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     this.parentPrototype = parentPrototype;
   });
 
-  Object.defineProperty(this, 'table', {
-    get: function() {
-      return this._table;
-    },
-    set: function(table) {
-      this._table = table;
-    }
-  });
-
-  Object.defineProperty(this, 'database', {
-    get: function() {
-      if (this.context && this.context.databaseTransaction)
-        return this.context.databaseTransaction;
-      else
-        return this.table.database;
-    }
-  });
-
-  this.create = function(json) {
-    return this._createOrUnserialize(json, 'create');
+  this.getName = function() {
+    return this.getClass().name;
   };
 
-  this.unserialize = function(json) {
-    return this._createOrUnserialize(json, 'unserialize');
+  this.getRepository = function() {
+    // TODO: should return a transactional repository
+    // in case there is an active transaction
+    var repository = this._repository;
+    if (!repository) throw new Error('undefined repository');
+    return repository;
   };
 
-  this.normalize = function(json) {
-    return this.unserialize(json).serialize();
+  this.setRepository = function(repository) {
+    this._repository = repository;
   };
 
-  this._createOrUnserialize = function(json, mode) {
+  this.createItem = function(json) {
+    return this._createOrUnserializeItem(json, 'create');
+  };
+
+  this.unserializeItem = function(json) {
+    return this._createOrUnserializeItem(json, 'unserialize');
+  };
+
+  // this.normalize = function(json) { TODO: remove external references
+  //   return this.unserializeItem(json).serialize();
+  // };
+
+  this._createOrUnserializeItem = function(json, mode) {
     if (typeof json === 'number' || typeof json === 'string') {
       var value = json;
       json = {};
@@ -52,109 +50,101 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
       item = this.Item.create(json);
     else
       item = this.Item.unserialize(json);
-    item.parentCollection = this;
+    item.setCollection(this);
     item.context = this.context;
     if (this.fixedForeignKey) {
       item[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
     item.emit('didCreateOrUnserializeItem');
     return item;
-  }
+  };
 
-  this.get = function *(item, options) {
+  this.getItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    var key = item.getPrimaryKeyValue();
-    var json = yield this.database.get(this.table, key, options);
-    if (!json) return;
-    item.replaceValue(json);
-    item.emit('didLoad');
+    item = yield this.getRepository().getItem(item, options);
+    if (item) item.emit('didLoad');
     return item;
   };
 
-  this.put = function *(item, options) {
+  this.putItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     yield item.emitAsync('willSave');
     item.validate();
-    var key = item.getPrimaryKeyValue();
-    var json = item.serialize();
-    options = _.clone(options);
-    if (item.isNew) options.errorIfExists = true;
-    json = yield this.database.put(this.table, key, json, options);
-    if (json) item.replaceValue(json);
+    yield this.getRepository().putItem(item, options);
     yield item.emitAsync('didSave');
     return item;
   };
 
-  this.del = function *(item, options) {
+  this.deleteItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     yield item.emitAsync('willDelete');
-    var key = item.getPrimaryKeyValue();
-    yield this.database.del(this.table, key, options);
+    yield this.getRepository().deleteItem(item, options);
     yield item.emitAsync('didDelete');
   };
 
-  this.getMany = function *(items, options) {
+  this.getItems = function *(items, options) {
     if (!_.isArray(items))
       throw new Error("invalid 'items' parameter (should be an array)");
     items = items.map(this.normalizeItem.bind(this));
     options = this.normalizeOptions(options);
-    var keys = _.invoke(items, 'getPrimaryKeyValue');
-    var results = yield this.database.getMany(this.table, keys, options);
-    var items = [];
-    for (var i = 0; i < results.length; i++) {
-      // TODO: like this.get, try to reuse the passed items instead of
-      // building new one
-      var result = results[i];
-      var item = this.unserialize(result.value);
+    var items = yield this.getRepository().getItems(items, options);
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
       item.emit('didLoad');
-      items.push(item);
     }
     return items;
   };
 
-  this.getRange = function *(options) {
+  // Options:
+  //   filter: specifies the search criterias.
+  //     Example: { blogId: 'xyz123', postId: 'abc987' }.
+  //   order: specifies the property to order the results by:
+  //     Example: ['lastName', 'firstName'].
+  //   start, startAfter, end, endBefore: ...
+  //   reverse: if true, the search is made in reverse order.
+  //   properties: indicates properties to fetch. '*' for all properties
+  //     or an array of property name. If an index projection matches
+  //     the requested properties, the projection is used.
+  //   limit: maximum number of items to return.
+  this.findItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    var results = yield this.database.getRange(this.table, options);
-    var items = [];
-    for (var i = 0; i < results.length; i++) {
-      var result = results[i];
-      var item = this.unserialize(result.value);
+    var items = yield this.getRepository().findItems(this, options);
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
       item.emit('didLoad');
-      items.push(item);
     }
     return items;
   };
 
-  this.getCount = function *(options) {
+  this.countItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    return yield this.database.getCount(this.table, options);
+    return yield this.getRepository().countItems(this, options);
   };
 
-  this.delRange = function *(options) {
-    options = this.normalizeOptions(options);
-    yield this.forRange(options, function *(item) {
-      yield this.del(item, { errorIfMissing: false });
+  this.deleteItems = function *(options) {
+    yield this.forEachItems(options, function *(item) {
+      yield this.deleteItem(item, { errorIfMissing: false });
     }, this);
   };
 
-  this.forRange = function *(options, fn, thisArg) {
+  this.forEachItems = function *(options, fn, thisArg) {
     options = this.normalizeOptions(options);
     options = _.clone(options);
     options.limit = 250;
     while (true) {
-      var items = yield this.getRange(options);
+      var items = yield this.getItems(options);
       if (!items.length) break;
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
         yield fn.call(thisArg, item);
       }
       var lastItem = _.last(items);
-      options.startAfter = this.makeRangeKey(lastItem, options);
+      options.startAfter = this.makeRangeKey(lastItem, options); // <--------
       delete options.start;
       delete options.startBefore;
       delete options.value;
@@ -214,7 +204,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.normalizeItem = function(item) {
     if (!item) throw new Error('key or item is empty');
     if (!(item.isInstanceOf && item.isInstanceOf(this.Item))) {
-      item = this.create(item);
+      item = this.createItem(item);
     }
     return item;
   };
