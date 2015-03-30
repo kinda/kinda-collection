@@ -75,25 +75,35 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.put = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    yield item.emitAsync('willSave');
-    item.validate();
-    var key = item.getPrimaryKeyValue();
-    var json = item.serialize();
-    options = _.clone(options);
-    if (item.isNew) options.errorIfExists = true;
-    json = yield this.database.put(this.table, key, json, options);
-    if (json) item.replaceValue(json);
-    yield item.emitAsync('didSave');
+    try {
+      item.isSaving = true;
+      yield item.emitAsync('willSave');
+      item.validate();
+      var key = item.getPrimaryKeyValue();
+      var json = item.serialize();
+      options = _.clone(options);
+      if (item.isNew) options.errorIfExists = true;
+      json = yield this.database.put(this.table, key, json, options);
+      if (json) item.replaceValue(json);
+      yield item.emitAsync('didSave');
+    } finally {
+      item.isSaving = false;
+    }
     return item;
   };
 
   this.del = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    yield item.emitAsync('willDelete');
-    var key = item.getPrimaryKeyValue();
-    yield this.database.del(this.table, key, options);
-    yield item.emitAsync('didDelete');
+    try {
+      item.isDeleting = true;
+      yield item.emitAsync('willDelete');
+      var key = item.getPrimaryKeyValue();
+      yield this.database.del(this.table, key, options);
+      yield item.emitAsync('didDelete');
+    } finally {
+      item.isDeleting = false;
+    }
   };
 
   this.getMany = function *(items, options) {
