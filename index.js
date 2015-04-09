@@ -15,9 +15,8 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   };
 
   this.getRepository = function() {
-    // TODO: should return a transactional repository
-    // in case there is an active transaction
-    var repository = this._repository;
+    var repository = this.context && this.context.repositoryTransaction;
+    if (!repository) repository = this._repository;
     if (!repository) throw new Error('undefined repository');
     return repository;
   };
@@ -98,17 +97,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     return items;
   };
 
-  // Options:
-  //   filter: specifies the search criterias.
-  //     Example: { blogId: 'xyz123', postId: 'abc987' }.
-  //   order: specifies the property to order the results by:
-  //     Example: ['lastName', 'firstName'].
-  //   start, startAfter, end, endBefore: ...
-  //   reverse: if true, the search is made in reverse order.
-  //   properties: indicates properties to fetch. '*' for all properties
-  //     or an array of property name. If an index projection matches
-  //     the requested properties, the projection is used.
-  //   limit: maximum number of items to return.
   this.findItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
@@ -126,79 +114,47 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     return yield this.getRepository().countItems(this, options);
   };
 
-  this.deleteItems = function *(options) {
+  this.forEachItems = function *(options, fn, thisArg) {
+    options = this.normalizeOptions(options);
+    options = this.injectFixedForeignKey(options);
+    yield this.getRepository().forEachItems(this, options, fn, thisArg);
+  };
+
+  this.findAndDeleteItems = function *(options) {
+    options = this.normalizeOptions(options);
     yield this.forEachItems(options, function *(item) {
       yield this.deleteItem(item, { errorIfMissing: false });
     }, this);
   };
 
-  this.forEachItems = function *(options, fn, thisArg) {
-    options = this.normalizeOptions(options);
-    options = _.clone(options);
-    options.limit = 250;
-    while (true) {
-      var items = yield this.getItems(options);
-      if (!items.length) break;
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        yield fn.call(thisArg, item);
+  // this.call = function *(item, action, params, options) {
+  //   item = this.normalizeItem(item);
+  //   options = this.normalizeOptions(options);
+  //   var key = item.getPrimaryKeyValue();
+  //   return yield this.database.call(this.table, key, action, params, options);
+  // };
+
+  this.transaction = function *(fn, options) {
+    if (!this.context)
+      throw new Error('cannot start a transaction without a context');
+    if (this.context.repositoryTransaction) return yield fn();
+    return yield this.getRepository().transaction(function *(tr) {
+      this.context.repositoryTransaction = tr;
+      try {
+        return yield fn();
+      } finally {
+        this.context.repositoryTransaction = undefined;
       }
-      var lastItem = _.last(items);
-      options.startAfter = this.makeRangeKey(lastItem, options); // <--------
-      delete options.start;
-      delete options.startBefore;
-      delete options.value;
-    };
+    }.bind(this), options);
   };
 
   this.injectFixedForeignKey = function(options) {
     if (this.fixedForeignKey) {
       options = _.clone(options);
-      var by = options.by || [];
-      if (!_.isArray(by)) by = [by];
-      by.unshift(this.fixedForeignKey.name);
-      options.by = by;
-      var prefix = options.prefix || [];
-      if (!_.isArray(prefix)) prefix = [prefix];
-      prefix.unshift(this.fixedForeignKey.value);
-      options.prefix = prefix;
+      if (!options.query) options.query = {};
+      options.query[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
     return options;
-  };
-
-  this.makeRangeKey = function(item, options) {
-    item = this.normalizeItem(item);
-    options = this.normalizeOptions(options);
-    var key = item.getPrimaryKeyValue();
-    var json = item.serialize();
-    return this.database.makeRangeKey(
-      this.table, key, json, options
-    );
-  };
-
-  this.call = function *(item, action, params, options) {
-    item = this.normalizeItem(item);
-    options = this.normalizeOptions(options);
-    var key = item.getPrimaryKeyValue();
-    return yield this.database.call(this.table, key, action, params, options);
-  };
-
-  this.transaction = function *(fn, options) {
-    if (!this.context)
-      throw new Error('cannot start a transaction without a context');
-    if (this.context.databaseTransaction) return yield fn();
-    return yield this.database.transaction(function *(tr) {
-      this.context.databaseTransaction = tr;
-      try {
-        return yield fn();
-      } finally {
-        this.context.databaseTransaction = undefined;
-      }
-    }.bind(this), options);
-  };
-
-  this.parseURL = function(url) { // extract primary key from an URL
-    return this.database.parseURL(this.table, url);
   };
 
   this.normalizeItem = function(item) {
