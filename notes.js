@@ -15,8 +15,15 @@ var Users = Users.extend('Users', function() {
 });
 
 var server = RepositoryServer.create();
-server.addCollection(Users, { authorizer: authorizer })
-server.addCollection(Tokens, { authorizer: authorizer })
+server.addCollection(BackUsers, FrontUsers, { authorizer: authorizer });
+server.addCollection(BackTokens, FrontTokens, { authorizer: authorizer });
+server.addCollection(People, People, {
+  methods: {
+    'getItem': { authorizer: authorizer },
+    'putItem': false
+  }
+});
+server.setAuthorizer(authorizer);
 api.use(server.getMiddleware());
 
 // ---

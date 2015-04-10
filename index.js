@@ -69,19 +69,29 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.putItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    yield item.emitAsync('willSave');
-    item.validate();
-    yield this.getRepository().putItem(item, options);
-    yield item.emitAsync('didSave');
+    try {
+      item.isSaving = true;
+      yield item.emitAsync('willSave');
+      item.validate();
+      yield this.getRepository().putItem(item, options);
+      yield item.emitAsync('didSave');
+    } finally {
+      item.isSaving = false;
+    }
     return item;
   };
 
   this.deleteItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    yield item.emitAsync('willDelete');
-    yield this.getRepository().deleteItem(item, options);
-    yield item.emitAsync('didDelete');
+    try {
+      item.isDeleting = true;
+      yield item.emitAsync('willDelete');
+      yield this.getRepository().deleteItem(item, options);
+      yield item.emitAsync('didDelete');
+    } finally {
+      item.isDeleting = false;
+    }
   };
 
   this.getItems = function *(items, options) {
