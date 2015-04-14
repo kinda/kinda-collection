@@ -8,6 +8,14 @@ var Model = require('kinda-model');
 var Relation = require('./relation');
 
 var Item = Model.extend('Item', function() {
+  this.getCollection = function() {
+    return this._collection;
+  };
+
+  this.setCollection = function(collection) {
+    this._collection = collection;
+  };
+
   this.getPrimaryKeyProperty = function() {
     var prop = this._primaryKey;
     if (!prop) throw new Error('primary key property is missing');
@@ -43,9 +51,10 @@ var Item = Model.extend('Item', function() {
     var prop = this.addProperty(name, type);
     if (options.isAuto) {
       this.onAsync('willSave', function *() {
-        if (false) yield false;
-        if (this.parentCollection.database.isFinal) // TODO: improve this
+        // TODO: improve this
+        if (this.getCollection().getRepository().isLocal) {
           this.generateKeyValue(prop);
+        }
       });
     }
     return prop;
@@ -55,9 +64,10 @@ var Item = Model.extend('Item', function() {
     if (!name) name = 'createdOn';
     var prop = this.addProperty(name, Date);
     this.onAsync('willSave', function *() {
-      if (false) yield false;
-      if (this.parentCollection.database.isFinal)
+      // TODO: improve this
+      if (this.getCollection().getRepository().isLocal) {
         if (!this[name]) this[name] = new Date;
+      }
     });
     return prop;
   };
@@ -66,9 +76,10 @@ var Item = Model.extend('Item', function() {
     if (!name) name = 'updatedOn';
     var prop = this.addProperty(name, Date);
     this.onAsync('willSave', function *() {
-      if (false) yield false;
-      if (this.parentCollection.database.isFinal)
+      // TODO: improve this
+      if (this.getCollection().getRepository().isLocal) {
         this[name] = new Date;
+      }
     });
     return prop;
   };
@@ -187,31 +198,31 @@ var Item = Model.extend('Item', function() {
   };
 
   this.load = function *(options) {
-    yield this.parentCollection.get(this, options);
+    yield this.getCollection().getItem(this, options);
   };
 
   this.save = function *(options) {
-    yield this.parentCollection.put(this, options);
+    yield this.getCollection().putItem(this, options);
   };
 
-  this.del = function *(options) {
-    yield this.parentCollection.del(this, options);
+  this.delete = function *(options) {
+    yield this.getCollection().deleteItem(this, options);
   };
 
-  this.call = function *(action, params, options) {
-    return yield this.parentCollection.call(this, action, params, options);
+  this.call = function *(method, options, body) {
+    return yield this.getCollection().callItem(this, method, options, body);
   };
 
   this.transaction = function *(fn, options) {
-    return yield this.parentCollection.transaction(fn, options);
+    return yield this.getCollection().transaction(fn, options);
   };
 
-  this.getURL = function() {
-    var db = this.parentCollection.database;
-    var table = this.parentCollection.table;
-    var key = this.getPrimaryKeyValue();
-    return db.makeURL(table, key, undefined, undefined, { includeToken: false });
-  };
+  // this.getURL = function() { TODO: should be in RemoteRepository?
+  //   var db = this.getCollection().database;
+  //   var table = this.getCollection().table;
+  //   var key = this.getPrimaryKeyValue();
+  //   return db.makeURL(table, key, undefined, undefined, { includeToken: false });
+  // };
 });
 
 module.exports = Item;
