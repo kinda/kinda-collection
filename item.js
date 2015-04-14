@@ -116,9 +116,11 @@ var Item = Model.extend('Item', function() {
     });
 
     this.onAsync('didDelete', function *() {
-      var items = yield this[name].getRange();
-      for (var i = 0; i < items.length; i++) {
-        yield items[i].del();
+      if (this.getCollection().getRepository().isLocal) {
+        var items = yield this[name].getRange();
+        for (var i = 0; i < items.length; i++) {
+          yield items[i].del();
+        }
       }
     });
   };
