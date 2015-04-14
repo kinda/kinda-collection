@@ -71,10 +71,12 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     try {
       item.isSaving = true;
-      yield item.emitAsync('willSave');
-      item.validate();
-      yield this.getRepository().putItem(item, options);
-      yield item.emitAsync('didSave');
+      yield this.transaction(function *() {
+        yield item.emitAsync('willSave');
+        item.validate();
+        yield this.getRepository().putItem(item, options);
+        yield item.emitAsync('didSave');
+      }.bind(this));
     } finally {
       item.isSaving = false;
     }
@@ -86,9 +88,11 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     try {
       item.isDeleting = true;
-      yield item.emitAsync('willDelete');
-      yield this.getRepository().deleteItem(item, options);
-      yield item.emitAsync('didDelete');
+      yield this.transaction(function *() {
+        yield item.emitAsync('willDelete');
+        yield this.getRepository().deleteItem(item, options);
+        yield item.emitAsync('didDelete');
+      }.bind(this));
     } finally {
       item.isDeleting = false;
     }
@@ -137,16 +141,28 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     }, this);
   };
 
-  // this.call = function *(item, action, params, options) {
-  //   item = this.normalizeItem(item);
-  //   options = this.normalizeOptions(options);
-  //   var key = item.getPrimaryKeyValue();
-  //   return yield this.database.call(this.table, key, action, params, options);
-  // };
+  this.call = function *(method, options, body) {
+    return yield this.callCollection(method, options, body);
+  };
+
+  this.callCollection = function *(method, options, body) {
+    options = this.normalizeOptions(options);
+    options = this.injectFixedForeignKey(options);
+    return yield this.getRepository().call(this, undefined, method, options, body);
+  };
+
+  this.callItem = function *(item, method, options, body) {
+    item = this.normalizeItem(item);
+    options = this.normalizeOptions(options);
+    return yield this.getRepository().call(this, item, method, options, body);
+  };
 
   this.transaction = function *(fn, options) {
-    if (!this.context)
-      throw new Error('cannot start a transaction without a context');
+    if (!this.context) {
+      // cannot start a transaction without a context
+      // TODO: should throw an error?
+      return yield fn();
+    }
     if (this.context.repositoryTransaction) return yield fn();
     return yield this.getRepository().transaction(function *(tr) {
       this.context.repositoryTransaction = tr;

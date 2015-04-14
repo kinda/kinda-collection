@@ -209,8 +209,8 @@ var Item = Model.extend('Item', function() {
     yield this.getCollection().deleteItem(this, options);
   };
 
-  this.call = function *(action, params, options) {
-    return yield this.getCollection().call(this, action, params, options);
+  this.call = function *(method, options, body) {
+    return yield this.getCollection().callItem(this, method, options, body);
   };
 
   this.transaction = function *(fn, options) {
