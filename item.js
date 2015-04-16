@@ -117,7 +117,7 @@ var Item = Model.extend('Item', function() {
 
     this.onAsync('didDelete', function *() {
       if (this.getCollection().getRepository().isLocal) {
-        var items = yield this[name].getRange();
+        var items = yield this[name].findItems();
         for (var i = 0; i < items.length; i++) {
           yield items[i].del();
         }
