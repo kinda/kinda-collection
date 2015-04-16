@@ -219,7 +219,7 @@ var Item = Model.extend('Item', function() {
     return yield this.getCollection().transaction(fn, options);
   };
 
-  this.makeURL = function(action, options) {
+  this.makeURL = function(method, options) {
     var collection = this.getCollection();
     return collection.getRepository().makeURL(collection, this, method, options);
   };

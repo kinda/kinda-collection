@@ -170,7 +170,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     }.bind(this), options);
   };
 
-  this.makeURL = function(action, options) {
+  this.makeURL = function(method, options) {
     return this.getRepository().makeURL(this, undefined, method, options);
   };
 
