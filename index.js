@@ -170,6 +170,10 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     }.bind(this), options);
   };
 
+  this.makeURL = function(action, options) {
+    return this.getRepository().makeURL(this, undefined, method, options);
+  };
+
   this.injectFixedForeignKey = function(options) {
     if (this.fixedForeignKey) {
       options = _.clone(options);

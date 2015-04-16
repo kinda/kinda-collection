@@ -219,12 +219,10 @@ var Item = Model.extend('Item', function() {
     return yield this.getCollection().transaction(fn, options);
   };
 
-  // this.getURL = function() { TODO: should be in RemoteRepository?
-  //   var db = this.getCollection().database;
-  //   var table = this.getCollection().table;
-  //   var key = this.getPrimaryKeyValue();
-  //   return db.makeURL(table, key, undefined, undefined, { includeToken: false });
-  // };
+  this.makeURL = function(action, options) {
+    var collection = this.getCollection();
+    return collection.getRepository().makeURL(collection, this, method, options);
+  };
 });
 
 module.exports = Item;
