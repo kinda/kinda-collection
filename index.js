@@ -33,10 +33,6 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     return this._createOrUnserializeItem(json, 'unserialize');
   };
 
-  // this.normalize = function(json) { TODO: remove external references
-  //   return this.unserializeItem(json).serialize();
-  // };
-
   this._createOrUnserializeItem = function(json, mode) {
     if (typeof json === 'number' || typeof json === 'string') {
       var value = json;
