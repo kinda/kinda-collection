@@ -132,9 +132,8 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
 
   this.findAndDeleteItems = function *(options) {
     options = this.normalizeOptions(options);
-    yield this.forEachItems(options, function *(item) {
-      yield this.deleteItem(item, { errorIfMissing: false });
-    }, this);
+    options = this.injectFixedForeignKey(options);
+    yield this.getRepository().findAndDeleteItems(this, options);
   };
 
   this.call = function *(method, options, body) {
