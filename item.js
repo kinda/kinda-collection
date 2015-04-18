@@ -119,7 +119,7 @@ var Item = Model.extend('Item', function() {
       if (this.getCollection().getRepository().isLocal) {
         var items = yield this[name].findItems();
         for (var i = 0; i < items.length; i++) {
-          yield items[i].del();
+          yield items[i].delete();
         }
       }
     });
