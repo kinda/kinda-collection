@@ -11,7 +11,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   });
 
   this.getName = function() {
-    return this.getClass().name;
+    return this.getClassName();
   };
 
   this.getRepository = function() {
