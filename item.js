@@ -125,6 +125,17 @@ var Item = Model.extend('Item', function() {
     });
   };
 
+  this.getIndexes = function() {
+    if (!this._indexes) this._indexes = [];
+    return this._indexes;
+  };
+
+  this.addIndex = function(properties, options) {
+    var index = options || {};
+    index.properties = properties;
+    this.getIndexes().push(index);
+  };
+
   Object.defineProperty(this, 'isNew', {
     get: function() {
       return !this._isSaved;

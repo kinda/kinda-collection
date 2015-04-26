@@ -1,3 +1,23 @@
+var People = Collection.extend('People', function() {
+  this.Item = this.Item.extend('Person', function() {
+    this.addPrimaryKeyProperty('id');
+    this.addProperty('firstName');
+    this.addProperty('lastName');
+
+    this.addIndex('age');
+    this.addIndex(['country', 'city']);
+    this.addIndex(
+      ['lastName', 'firstName'],
+      { projection: ['firstName', 'lastName', 'age'] }
+    );
+    this.addIndex(function fullNameSortKey(item) {
+      return ...;
+    });
+  });
+});
+
+// -------------------------------------------
+
 // frontend app
 
 var repository = RemoteRepository.create(config.api.url);
