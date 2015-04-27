@@ -1,1 +1,1 @@
-// Tests are in kinda-db-repository
+// Tests are in kinda-local-repository

@@ -90,11 +90,11 @@ var Item = Model.extend('Item', function() {
     return this._relations;
   }
 
-  this.addHasManyRelation = function(name, klass, foreignKey, options) {
+  this.addHasManyRelation = function(name, collectionName, foreignKey, options) {
     if (!options) options = {};
     options.type = 'hasMany';
 
-    var relation = Relation.create(name, klass, foreignKey, options);
+    var relation = Relation.create(name, collectionName, foreignKey, options);
     this.getRelations()[name] = relation;
 
     Object.defineProperty(this, name, {
@@ -103,7 +103,9 @@ var Item = Model.extend('Item', function() {
           this._relationValues = {};
         var val = this._relationValues[name];
         if (!val) {
-          this._relationValues[name] = val = klass.create();
+          var repository = this.getCollection().getRepository();
+          val = repository.createCollection(collectionName);
+          this._relationValues[name] = val;
           val.context = this.context;
           val.fixedForeignKey = {
             name: foreignKey,
