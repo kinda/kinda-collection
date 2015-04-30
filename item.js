@@ -16,9 +16,12 @@ var Item = Model.extend('Item', function() {
     this._collection = collection;
   };
 
-  this.getPrimaryKeyProperty = function() {
+  this.getPrimaryKeyProperty = function(errorIfMissing) {
     var prop = this._primaryKey;
-    if (!prop) throw new Error('primary key property is missing');
+    if (!prop) {
+      if (errorIfMissing === false) return;
+      throw new Error('primary key property is missing');
+    }
     return prop;
   };
 
@@ -213,7 +216,10 @@ var Item = Model.extend('Item', function() {
   };
 
   this.load = function *(options) {
-    yield this.getCollection().getItem(this, options);
+    var item = yield this.getCollection().getItem(this, options);
+    if (item !== this) {
+      throw new Error('load() returned an item from a different class');
+    }
   };
 
   this.save = function *(options) {
