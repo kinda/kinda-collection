@@ -207,6 +207,25 @@ var Item = Model.extend('Item', function() {
     this.generateKeyValue(prop);
   };
 
+  this.getSuperclassesWithPrimaryKeyProperty = function() {
+    var classes = [];
+    this.getSuperclasses().forEach(function(superclass) {
+      var prototype = superclass.getPrototype();
+      if (!prototype.getPrimaryKeyProperty) return;
+      if (!prototype.getPrimaryKeyProperty(false)) return;
+      classes.push(superclass);
+    });
+    return classes;
+  };
+
+  this.getClassNames = function() {
+    var classes = this.getSuperclassesWithPrimaryKeyProperty();
+    var classNames = _.invoke(classes, 'getName');
+    classNames.unshift(this.getClassName());
+    classNames = _.uniq(classNames);
+    return classNames;
+  };
+
   this.getToken = function() {
     return this._token;
   };
