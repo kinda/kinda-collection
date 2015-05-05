@@ -236,6 +236,7 @@ var Item = Model.extend('Item', function() {
 
   this.load = function *(options) {
     var item = yield this.getCollection().getItem(this, options);
+    if (!item && options && options.errorIfMissing === false) return;
     if (item !== this) {
       throw new Error('load() returned an item from a different class');
     }
