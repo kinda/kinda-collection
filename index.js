@@ -82,16 +82,18 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.deleteItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
+    var hasBeenDeleted;
     try {
       item.isDeleting = true;
       yield this.transaction(function *() {
         yield item.emitAsync('willDelete');
-        yield this.getRepository().deleteItem(item, options);
-        yield item.emitAsync('didDelete');
+        hasBeenDeleted = yield this.getRepository().deleteItem(item, options);
+        if (hasBeenDeleted) yield item.emitAsync('didDelete');
       }.bind(this));
     } finally {
       item.isDeleting = false;
     }
+    return hasBeenDeleted;
   };
 
   this.getItems = function *(items, options) {
@@ -133,7 +135,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.findAndDeleteItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    yield this.getRepository().findAndDeleteItems(this, options);
+    return yield this.getRepository().findAndDeleteItems(this, options);
   };
 
   this.call = function *(method, options, body) {

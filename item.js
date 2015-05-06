@@ -247,7 +247,7 @@ var Item = Model.extend('Item', function() {
   };
 
   this.delete = function *(options) {
-    yield this.getCollection().deleteItem(this, options);
+    return yield this.getCollection().deleteItem(this, options);
   };
 
   this.call = function *(method, options, body) {
