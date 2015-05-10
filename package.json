@@ -18,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "idgen": "^2.0.2",
+    "kinda-log": "^0.1.14",
     "kinda-model": "^0.1.0",
     "kinda-object": "^0.1.0",
     "kinda-util": "^0.1.0",

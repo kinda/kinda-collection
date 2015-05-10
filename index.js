@@ -1,6 +1,7 @@
 "use strict";
 
 var _ = require('lodash');
+var log = require('kinda-log').create();
 var util = require('kinda-util').create();
 var KindaObject = require('kinda-object');
 
@@ -72,6 +73,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
         item.validate();
         yield this.getRepository().putItem(item, options);
         yield item.emitAsync('didSave');
+        log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' saved');
       }.bind(this));
     } finally {
       item.isSaving = false;
@@ -88,7 +90,10 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
       yield this.transaction(function *() {
         yield item.emitAsync('willDelete');
         hasBeenDeleted = yield this.getRepository().deleteItem(item, options);
-        if (hasBeenDeleted) yield item.emitAsync('didDelete');
+        if (hasBeenDeleted) {
+          yield item.emitAsync('didDelete');
+          log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' deleted');
+        }
       }.bind(this));
     } finally {
       item.isDeleting = false;
