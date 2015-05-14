@@ -74,7 +74,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
         yield this.getRepository().putItem(item, options);
         // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didSave' listeners.
         yield item.emitAsync('didSave');
-        log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' saved');
+        log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' saved to ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
       }.bind(this));
     } finally {
       item.isSaving = false;
@@ -94,7 +94,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
         if (hasBeenDeleted) {
           // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didDelete' listeners.
           yield item.emitAsync('didDelete');
-          log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' deleted');
+          log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' deleted from ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
         }
       }.bind(this));
     } finally {
