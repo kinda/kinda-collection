@@ -136,12 +136,16 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.forEachItems = function *(options, fn, thisArg) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    yield this.getRepository().forEachItems(this, options, fn, thisArg);
+    yield this.getRepository().forEachItems(this, options, function *(item) {
+      item.emit('didLoad');
+      yield fn.call(this, item);
+    }, thisArg);
   };
 
   this.findAndDeleteItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
+    // FIXME: 'willDelete' and 'didDelete' event should be emitted for each items
     return yield this.getRepository().findAndDeleteItems(this, options);
   };
 
