@@ -124,7 +124,7 @@ var Item = Model.extend('Item', function() {
       if (this.getCollection().getRepository().isLocal) {
         var items = yield this[name].findItems();
         for (var i = 0; i < items.length; i++) {
-          yield items[i].delete();
+          yield items[i].delete({ source: 'computer' });
         }
       }
     });
