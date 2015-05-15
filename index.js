@@ -59,7 +59,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     item = yield this.getRepository().getItem(item, options);
-    if (item) item.emit('didLoad');
+    if (item) item.emit('didLoad', options);
     return item;
   };
 
@@ -69,11 +69,11 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     try {
       item.isSaving = true;
       yield this.transaction(function *() {
-        yield item.emitAsync('willSave');
+        yield item.emitAsync('willSave', options);
         item.validate();
         yield this.getRepository().putItem(item, options);
         // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didSave' listeners.
-        yield item.emitAsync('didSave');
+        yield item.emitAsync('didSave', options);
         log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' saved to ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
       }.bind(this));
     } finally {
@@ -89,11 +89,11 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     try {
       item.isDeleting = true;
       yield this.transaction(function *() {
-        yield item.emitAsync('willDelete');
+        yield item.emitAsync('willDelete', options);
         hasBeenDeleted = yield this.getRepository().deleteItem(item, options);
         if (hasBeenDeleted) {
           // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didDelete' listeners.
-          yield item.emitAsync('didDelete');
+          yield item.emitAsync('didDelete', options);
           log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' deleted from ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
         }
       }.bind(this));
@@ -111,7 +111,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var items = yield this.getRepository().getItems(items, options);
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
-      item.emit('didLoad');
+      item.emit('didLoad', options);
     }
     return items;
   };
@@ -122,7 +122,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     var items = yield this.getRepository().findItems(this, options);
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
-      item.emit('didLoad');
+      item.emit('didLoad', options);
     }
     return items;
   };
@@ -137,7 +137,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
     yield this.getRepository().forEachItems(this, options, function *(item) {
-      item.emit('didLoad');
+      item.emit('didLoad', options);
       yield fn.call(this, item);
     }, thisArg);
   };

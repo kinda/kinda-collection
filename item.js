@@ -54,7 +54,6 @@ var Item = Model.extend('Item', function() {
     var prop = this.addProperty(name, type);
     if (options.isAuto) {
       this.onAsync('willSave', function *() {
-        // TODO: improve this
         if (this.getCollection().getRepository().isLocal) {
           this.generateKeyValue(prop);
         }
@@ -67,7 +66,6 @@ var Item = Model.extend('Item', function() {
     if (!name) name = 'createdOn';
     var prop = this.addProperty(name, Date);
     this.onAsync('willSave', function *() {
-      // TODO: improve this
       if (this.getCollection().getRepository().isLocal) {
         if (!this[name]) this[name] = new Date;
       }
@@ -78,11 +76,10 @@ var Item = Model.extend('Item', function() {
   this.addUpdatedOnProperty = function(name, options) {
     if (!name) name = 'updatedOn';
     var prop = this.addProperty(name, Date);
-    this.onAsync('willSave', function *() {
-      // TODO: improve this
-      if (this.getCollection().getRepository().isLocal) {
-        this[name] = new Date;
-      }
+    this.onAsync('willSave', function *(options) {
+      if (!this.getCollection().getRepository().isLocal) return;
+      if (options.source === 'computer' || options.source === 'localSynchronizer' || options.source === 'remoteSynchronizer' || options.source === 'archive') return;
+      this[name] = new Date;
     });
     return prop;
   };
