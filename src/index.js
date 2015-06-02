@@ -1,30 +1,34 @@
-"use strict";
+'use strict';
 
-var _ = require('lodash');
-var log = require('kinda-log').create();
-var util = require('kinda-util').create();
-var KindaObject = require('kinda-object');
+let _ = require('lodash');
+let KindaObject = require('kinda-object');
 
-var KindaCollection = KindaObject.extend('KindaCollection', function() {
-  var parentPrototype = this;
-  this.Item = require('./item').extend('Item', function() {
-    this.parentPrototype = parentPrototype;
+let KindaCollection = KindaObject.extend('KindaCollection', function() {
+  this.Item = require('./item');
+
+  Object.defineProperty(this, 'name', {
+    get() {
+      return this.class.name;
+    }
   });
 
-  this.getName = function() {
-    return this.getClassName();
-  };
+  Object.defineProperty(this, 'repository', {
+    get() {
+      return this._repository;
+    },
+    set(repository) {
+      this._repository = repository;
+    }
+  });
 
-  this.getRepository = function() {
-    var repository = this.context && this.context.repositoryTransaction;
-    if (!repository) repository = this._repository;
-    if (!repository) throw new Error('undefined repository');
-    return repository;
-  };
-
-  this.setRepository = function(repository) {
-    this._repository = repository;
-  };
+  Object.defineProperty(this, 'fixedForeignKey', {
+    get() {
+      return this._fixedForeignKey;
+    },
+    set(fixedForeignKey) {
+      this._fixedForeignKey = fixedForeignKey;
+    }
+  });
 
   this.createItem = function(json) {
     return this._createOrUnserializeItem(json, 'create');
@@ -36,18 +40,15 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
 
   this._createOrUnserializeItem = function(json, mode) {
     if (typeof json === 'number' || typeof json === 'string') {
-      var value = json;
+      let value = json;
       json = {};
-      var itemProto = this.Item.getPrototype();
-      json[itemProto.getPrimaryKeyName()] = value;
+      let itemProto = this.Item.prototype;
+      json[itemProto.primaryKeyName] = value;
     }
-    var item;
-    if (mode === 'create')
-      item = this.Item.create(json);
-    else
-      item = this.Item.unserialize(json);
-    item.setCollection(this);
-    item.context = this.context;
+    let item;
+    if (mode === 'create') item = this.Item.create(json);
+    else item = this.Item.unserialize(json);
+    item.collection = this;
     if (this.fixedForeignKey) {
       item[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
@@ -58,7 +59,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.getItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    item = yield this.getRepository().getItem(item, options);
+    item = yield this.repository.getItem(item, options);
     if (item) item.emit('didLoad', options);
     return item;
   };
@@ -71,10 +72,9 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
       yield this.transaction(function *() {
         yield item.emitAsync('willSave', options);
         item.validate();
-        yield this.getRepository().putItem(item, options);
-        // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didSave' listeners.
+        yield this.repository.putItem(item, options);
         yield item.emitAsync('didSave', options);
-        log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' saved to ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
+        this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' saved to ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
       }.bind(this));
     } finally {
       item.isSaving = false;
@@ -85,16 +85,15 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.deleteItem = function *(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    var hasBeenDeleted;
+    let hasBeenDeleted;
     try {
       item.isDeleting = true;
       yield this.transaction(function *() {
         yield item.emitAsync('willDelete', options);
-        hasBeenDeleted = yield this.getRepository().deleteItem(item, options);
+        hasBeenDeleted = yield this.repository.deleteItem(item, options);
         if (hasBeenDeleted) {
-          // TODO: to avoid uncessary synchronization of the server, options.originRepositoryId should be propagated in operations executed by 'didDelete' listeners.
           yield item.emitAsync('didDelete', options);
-          log.debug(item.getClassName() + '#' + item.getPrimaryKeyValue() + ' deleted from ' + (this.getRepository().isLocal ? 'local' : 'remote') + ' repository');
+          this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' deleted from ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
         }
       }.bind(this));
     } finally {
@@ -104,39 +103,34 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   };
 
   this.getItems = function *(items, options) {
-    if (!_.isArray(items))
-      throw new Error("invalid 'items' parameter (should be an array)");
+    if (!_.isArray(items)) {
+      throw new Error('invalid \'items\' parameter (should be an array)');
+    }
     items = items.map(this.normalizeItem.bind(this));
     options = this.normalizeOptions(options);
-    var items = yield this.getRepository().getItems(items, options);
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      item.emit('didLoad', options);
-    }
+    items = yield this.repository.getItems(items, options);
+    for (let item of items) item.emit('didLoad', options);
     return items;
   };
 
   this.findItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    var items = yield this.getRepository().findItems(this, options);
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      item.emit('didLoad', options);
-    }
+    let items = yield this.repository.findItems(this, options);
+    for (let item of items) item.emit('didLoad', options);
     return items;
   };
 
   this.countItems = function *(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    return yield this.getRepository().countItems(this, options);
+    return yield this.repository.countItems(this, options);
   };
 
   this.forEachItems = function *(options, fn, thisArg) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    yield this.getRepository().forEachItems(this, options, function *(item) {
+    yield this.repository.forEachItems(this, options, function *(item) {
       item.emit('didLoad', options);
       yield fn.call(this, item);
     }, thisArg);
@@ -146,7 +140,7 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
     // FIXME: 'willDelete' and 'didDelete' event should be emitted for each items
-    return yield this.getRepository().findAndDeleteItems(this, options);
+    return yield this.repository.findAndDeleteItems(this, options);
   };
 
   this.call = function *(method, options, body) {
@@ -156,34 +150,34 @@ var KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.callCollection = function *(method, options, body) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    return yield this.getRepository().call(this, undefined, method, options, body);
+    return yield this.repository.call(this, undefined, method, options, body);
   };
 
   this.callItem = function *(item, method, options, body) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    return yield this.getRepository().call(this, item, method, options, body);
+    return yield this.repository.call(this, item, method, options, body);
   };
 
   this.transaction = function *(fn, options) {
-    if (!this.context) {
-      // cannot start a transaction without a context
-      // TODO: should throw an error?
-      return yield fn();
-    }
-    if (this.context.repositoryTransaction) return yield fn();
-    return yield this.getRepository().transaction(function *(tr) {
-      this.context.repositoryTransaction = tr;
-      try {
-        return yield fn();
-      } finally {
-        this.context.repositoryTransaction = undefined;
+    if (this.isInsideTransaction) return yield fn(this);
+    return yield this.repository.transaction(function *(newRepository) {
+      let newCollection = newRepository.createCollection(this.class.name);
+      if (this.fixedForeignKey) {
+        newCollection.fixedForeignKey = this.fixedForeignKey;
       }
+      return yield fn(newCollection);
     }.bind(this), options);
   };
 
+  Object.defineProperty(this, 'isInsideTransaction', {
+    get() {
+      return this.repository.isInsideTransaction;
+    }
+  });
+
   this.makeURL = function(method, options) {
-    return this.getRepository().makeURL(this, undefined, method, options);
+    return this.repository.makeURL(this, undefined, method, options);
   };
 
   this.injectFixedForeignKey = function(options) {
