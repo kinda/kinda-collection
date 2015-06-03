@@ -69,13 +69,14 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     try {
       item.isSaving = true;
-      yield this.transaction(function *() {
-        yield item.emitAsync('willSave', options);
-        item.validate();
-        yield this.repository.putItem(item, options);
-        yield item.emitAsync('didSave', options);
-        this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' saved to ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
-      }.bind(this));
+      yield item.transaction(function *(savingItem) {
+        yield savingItem.emitAsync('willSave', options);
+        savingItem.validate();
+        let repository = savingItem.collection.repository;
+        yield repository.putItem(savingItem, options);
+        yield savingItem.emitAsync('didSave', options);
+        repository.log.debug(savingItem.class.name + '#' + savingItem.primaryKeyValue + ' saved to ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
+      });
     } finally {
       item.isSaving = false;
     }
@@ -88,14 +89,15 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     let hasBeenDeleted;
     try {
       item.isDeleting = true;
-      yield this.transaction(function *() {
-        yield item.emitAsync('willDelete', options);
-        hasBeenDeleted = yield this.repository.deleteItem(item, options);
+      yield item.transaction(function *(deletingItem) {
+        yield deletingItem.emitAsync('willDelete', options);
+        let repository = deletingItem.collection.repository;
+        hasBeenDeleted = yield repository.deleteItem(deletingItem, options);
         if (hasBeenDeleted) {
-          yield item.emitAsync('didDelete', options);
-          this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' deleted from ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
+          yield deletingItem.emitAsync('didDelete', options);
+          repository.log.debug(deletingItem.class.name + '#' + deletingItem.primaryKeyValue + ' deleted from ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
         }
-      }.bind(this));
+      });
     } finally {
       item.isDeleting = false;
     }
