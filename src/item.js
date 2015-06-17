@@ -6,6 +6,18 @@ let Model = require('kinda-model');
 let Relation = require('./relation');
 
 let Item = Model.extend('Item', function() {
+  let superCreator = this.creator;
+  this.creator = function(collection, value) {
+    this.collection = collection;
+    superCreator.call(this, value);
+  };
+
+  let superUnserializer = this.unserializer;
+  this.unserializer = function(collection, json) {
+    this.collection = collection;
+    superUnserializer.call(this, json);
+  };
+
   Object.defineProperty(this, 'collection', {
     get() {
       return this._collection;

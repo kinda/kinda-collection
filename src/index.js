@@ -46,9 +46,8 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
       json[itemProto.primaryKeyName] = value;
     }
     let item;
-    if (mode === 'create') item = this.Item.create(json);
-    else item = this.Item.unserialize(json);
-    item.collection = this;
+    if (mode === 'create') item = this.Item.create(this, json);
+    else item = this.Item.unserialize(this, json);
     if (this.fixedForeignKey) {
       item[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
