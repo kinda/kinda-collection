@@ -6,6 +6,10 @@ let KindaObject = require('kinda-object');
 let KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.Item = require('./item');
 
+  this.creator = function(repository) {
+    this.repository = repository;
+  };
+
   Object.defineProperty(this, 'name', {
     get() {
       return this.class.name;
