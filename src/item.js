@@ -27,6 +27,18 @@ let Item = Model.extend('Item', function() {
     }
   });
 
+  Object.defineProperty(this, 'repository', {
+    get() {
+      return this.collection.repository;
+    }
+  });
+
+  Object.defineProperty(this, 'application', {
+    get() {
+      return this.repository.application;
+    }
+  });
+
   Object.defineProperty(this, 'primaryKeyProperty', {
     get() {
       return this._primaryKeyProperty;
@@ -78,7 +90,7 @@ let Item = Model.extend('Item', function() {
     let prop = this.addProperty(name, type);
     if (options.isAuto) {
       this.onAsync('willSave', function *() {
-        if (this.collection.repository.isLocal) {
+        if (this.repository.isLocal) {
           this.generateKeyValue(prop);
         }
       });
@@ -89,7 +101,7 @@ let Item = Model.extend('Item', function() {
   this.addCreatedOnProperty = function(name = 'createdOn') {
     let prop = this.addProperty(name, Date);
     this.onAsync('willSave', function *() {
-      if (this.collection.repository.isLocal) {
+      if (this.repository.isLocal) {
         if (!this[name]) this[name] = new Date();
       }
     });
@@ -99,7 +111,7 @@ let Item = Model.extend('Item', function() {
   this.addUpdatedOnProperty = function(name = 'updatedOn') {
     let prop = this.addProperty(name, Date);
     this.onAsync('willSave', function *(options) {
-      if (!this.collection.repository.isLocal) return;
+      if (!this.repository.isLocal) return;
       if (options.source === 'computer' || options.source === 'localSynchronizer' || options.source === 'remoteSynchronizer' || options.source === 'archive') return;
       this[name] = new Date();
     });
@@ -124,8 +136,7 @@ let Item = Model.extend('Item', function() {
         if (!this.hasOwnProperty('_relationValues')) this._relationValues = {};
         let val = this._relationValues[name];
         if (!val) {
-          let repository = this.collection.repository;
-          val = repository.createCollection(collectionName);
+          val = this.repository.createCollection(collectionName);
           this._relationValues[name] = val;
           val.fixedForeignKey = {
             name: foreignKey,
@@ -138,7 +149,7 @@ let Item = Model.extend('Item', function() {
     });
 
     this.onAsync('didDelete', function *() {
-      if (this.collection.repository.isLocal) {
+      if (this.repository.isLocal) {
         let items = yield this[name].findItems();
         for (let item of items) yield item.delete({ source: 'computer' });
       }
@@ -279,7 +290,7 @@ let Item = Model.extend('Item', function() {
   });
 
   this.makeURL = function(method, options) {
-    return this.collection.repository.makeURL(
+    return this.repository.makeURL(
       this.collection, this, method, options
     );
   };

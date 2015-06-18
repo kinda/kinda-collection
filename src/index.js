@@ -21,6 +21,12 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     }
   });
 
+  Object.defineProperty(this, 'application', {
+    get() {
+      return this.repository.application;
+    }
+  });
+
   Object.defineProperty(this, 'fixedForeignKey', {
     get() {
       return this._fixedForeignKey;
@@ -71,7 +77,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
       yield item.transaction(function *(savingItem) {
         yield savingItem.emitAsync('willSave', options);
         savingItem.validate();
-        let repository = savingItem.collection.repository;
+        let repository = savingItem.repository;
         yield repository.putItem(savingItem, options);
         yield savingItem.emitAsync('didSave', options);
         repository.log.debug(savingItem.class.name + '#' + savingItem.primaryKeyValue + ' saved to ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
@@ -90,7 +96,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
       item.isDeleting = true;
       yield item.transaction(function *(deletingItem) {
         yield deletingItem.emitAsync('willDelete', options);
-        let repository = deletingItem.collection.repository;
+        let repository = deletingItem.repository;
         hasBeenDeleted = yield repository.deleteItem(deletingItem, options);
         if (hasBeenDeleted) {
           yield deletingItem.emitAsync('didDelete', options);
