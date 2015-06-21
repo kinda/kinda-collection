@@ -25,9 +25,9 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     }
   });
 
-  Object.defineProperty(this, 'application', {
+  Object.defineProperty(this, 'app', {
     get() {
-      return this.repository.application;
+      return this.repository.app;
     }
   });
 
