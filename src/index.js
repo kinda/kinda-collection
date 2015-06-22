@@ -203,7 +203,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.normalizeItem = function(item) {
     if (!item) throw new Error('key or item is empty');
     if (!(item.isInstanceOf && item.isInstanceOf(this.Item))) {
-      item = this.createItem(item);
+      item = this.unserializeItem(item);
     }
     return item;
   };
