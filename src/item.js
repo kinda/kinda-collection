@@ -89,7 +89,7 @@ let Item = Model.extend('Item', function() {
     if (!(typeof name === 'string' && name)) throw new Error('name is missing');
     let prop = this.addProperty(name, type);
     if (options.isAuto) {
-      this.onAsync('willSave', function *() {
+      this.on('willSave', async function() {
         if (this.repository.isLocal) {
           this.generateKeyValue(prop);
         }
@@ -100,7 +100,7 @@ let Item = Model.extend('Item', function() {
 
   this.addCreatedOnProperty = function(name = 'createdOn') {
     let prop = this.addProperty(name, Date);
-    this.onAsync('willSave', function *() {
+    this.on('willSave', async function() {
       if (this.repository.isLocal) {
         if (!this[name]) this[name] = new Date();
       }
@@ -110,7 +110,7 @@ let Item = Model.extend('Item', function() {
 
   this.addUpdatedOnProperty = function(name = 'updatedOn') {
     let prop = this.addProperty(name, Date);
-    this.onAsync('willSave', function *(options) {
+    this.on('willSave', async function(options) {
       if (!this.repository.isLocal) return;
       if (options.source === 'computer' || options.source === 'localSynchronizer' || options.source === 'remoteSynchronizer' || options.source === 'archive') return;
       this[name] = new Date();
@@ -148,10 +148,10 @@ let Item = Model.extend('Item', function() {
       enumerable: true
     });
 
-    this.onAsync('didDelete', function *() {
+    this.on('didDelete', async function() {
       if (this.repository.isLocal) {
-        let items = yield this[name].findItems();
-        for (let item of items) yield item.delete({ source: 'computer' });
+        let items = await this[name].findItems();
+        for (let item of items) await item.delete({ source: 'computer' });
       }
     });
   };
@@ -195,7 +195,7 @@ let Item = Model.extend('Item', function() {
     this.isModified = false;
   });
 
-  this.onAsync('didSave', function *() {
+  this.on('didSave', async function() {
     this.isNew = false;
     this.isModified = false;
   });
@@ -248,34 +248,34 @@ let Item = Model.extend('Item', function() {
 
   // === Operations ===
 
-  this.load = function *(options = {}) {
-    let item = yield this.collection.getItem(this, options);
+  this.load = async function(options = {}) {
+    let item = await this.collection.getItem(this, options);
     if (!item && options.errorIfMissing === false) return;
     if (item !== this) {
       throw new Error('Item.prototype.load() returned an item from a different class');
     }
   };
 
-  this.save = function *(options) {
-    yield this.collection.putItem(this, options);
+  this.save = async function(options) {
+    await this.collection.putItem(this, options);
   };
 
-  this.delete = function *(options) {
-    return yield this.collection.deleteItem(this, options);
+  this.delete = async function(options) {
+    return await this.collection.deleteItem(this, options);
   };
 
-  this.call = function *(method, options, body) {
-    return yield this.collection.callItem(this, method, options, body);
+  this.call = async function(method, options, body) {
+    return await this.collection.callItem(this, method, options, body);
   };
 
-  this.transaction = function *(fn, options) {
-    if (this.isInsideTransaction) return yield fn(this);
+  this.transaction = async function(fn, options) {
+    if (this.isInsideTransaction) return await fn(this);
     let newItem;
-    let result = yield this.collection.transaction(function *(newCollection) {
+    let result = await this.collection.transaction(async function(newCollection) {
       newItem = newCollection.unserializeItem(this);
       newItem.isNew = this.isNew;
       newItem.isModified = this.isModified;
-      return yield fn(newItem);
+      return await fn(newItem);
     }.bind(this), options);
     this.replaceValue(newItem);
     this.isNew = newItem.isNew;

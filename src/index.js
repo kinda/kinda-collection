@@ -65,25 +65,25 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     return item;
   };
 
-  this.getItem = function *(item, options) {
+  this.getItem = async function(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    item = yield this.repository.getItem(item, options);
+    item = await this.repository.getItem(item, options);
     if (item) item.emit('didLoad', options);
     return item;
   };
 
-  this.putItem = function *(item, options) {
+  this.putItem = async function(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     try {
       item.isSaving = true;
-      yield item.transaction(function *(savingItem) {
-        yield savingItem.emitAsync('willSave', options);
+      await item.transaction(async function(savingItem) {
+        await savingItem.emit('willSave', options);
         savingItem.validate();
         let repository = savingItem.repository;
-        yield repository.putItem(savingItem, options);
-        yield savingItem.emitAsync('didSave', options);
+        await repository.putItem(savingItem, options);
+        await savingItem.emit('didSave', options);
         repository.log.debug(savingItem.class.name + '#' + savingItem.primaryKeyValue + ' saved to ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
       });
     } finally {
@@ -92,18 +92,18 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     return item;
   };
 
-  this.deleteItem = function *(item, options) {
+  this.deleteItem = async function(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     let hasBeenDeleted;
     try {
       item.isDeleting = true;
-      yield item.transaction(function *(deletingItem) {
-        yield deletingItem.emitAsync('willDelete', options);
+      await item.transaction(async function(deletingItem) {
+        await deletingItem.emit('willDelete', options);
         let repository = deletingItem.repository;
-        hasBeenDeleted = yield repository.deleteItem(deletingItem, options);
+        hasBeenDeleted = await repository.deleteItem(deletingItem, options);
         if (hasBeenDeleted) {
-          yield deletingItem.emitAsync('didDelete', options);
+          await deletingItem.emit('didDelete', options);
           repository.log.debug(deletingItem.class.name + '#' + deletingItem.primaryKeyValue + ' deleted from ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
         }
       });
@@ -113,71 +113,71 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     return hasBeenDeleted;
   };
 
-  this.getItems = function *(items, options) {
+  this.getItems = async function(items, options) {
     if (!_.isArray(items)) {
       throw new Error('invalid \'items\' parameter (should be an array)');
     }
     items = items.map(this.normalizeItem.bind(this));
     options = this.normalizeOptions(options);
-    items = yield this.repository.getItems(items, options);
+    items = await this.repository.getItems(items, options);
     for (let item of items) item.emit('didLoad', options);
     return items;
   };
 
-  this.findItems = function *(options) {
+  this.findItems = async function(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    let items = yield this.repository.findItems(this, options);
+    let items = await this.repository.findItems(this, options);
     for (let item of items) item.emit('didLoad', options);
     return items;
   };
 
-  this.countItems = function *(options) {
+  this.countItems = async function(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    return yield this.repository.countItems(this, options);
+    return await this.repository.countItems(this, options);
   };
 
-  this.forEachItems = function *(options, fn, thisArg) {
+  this.forEachItems = async function(options, fn, thisArg) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    yield this.repository.forEachItems(this, options, function *(item) {
+    await this.repository.forEachItems(this, options, async function(item) {
       item.emit('didLoad', options);
-      yield fn.call(this, item);
+      await fn.call(this, item);
     }, thisArg);
   };
 
-  this.findAndDeleteItems = function *(options) {
+  this.findAndDeleteItems = async function(options) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
     // FIXME: 'willDelete' and 'didDelete' event should be emitted for each items
-    return yield this.repository.findAndDeleteItems(this, options);
+    return await this.repository.findAndDeleteItems(this, options);
   };
 
-  this.call = function *(method, options, body) {
-    return yield this.callCollection(method, options, body);
+  this.call = async function(method, options, body) {
+    return await this.callCollection(method, options, body);
   };
 
-  this.callCollection = function *(method, options, body) {
+  this.callCollection = async function(method, options, body) {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
-    return yield this.repository.call(this, undefined, method, options, body);
+    return await this.repository.call(this, undefined, method, options, body);
   };
 
-  this.callItem = function *(item, method, options, body) {
+  this.callItem = async function(item, method, options, body) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
-    return yield this.repository.call(this, item, method, options, body);
+    return await this.repository.call(this, item, method, options, body);
   };
 
-  this.transaction = function *(fn, options) {
-    if (this.isInsideTransaction) return yield fn(this);
-    return yield this.repository.transaction(function *(newRepository) {
+  this.transaction = async function(fn, options) {
+    if (this.isInsideTransaction) return await fn(this);
+    return await this.repository.transaction(async function(newRepository) {
       let newCollection = newRepository.createCollection(this.class.name);
       if (this.fixedForeignKey) {
         newCollection.fixedForeignKey = this.fixedForeignKey;
       }
-      return yield fn(newCollection);
+      return await fn(newCollection);
     }.bind(this), options);
   };
 

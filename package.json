@@ -21,7 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "idgen": "^2.0.2",
-    "kinda-model": "^0.2.0",
+    "kinda-model": "^0.3.0",
     "kinda-object": "^0.3.0",
     "lodash": "^3.9.1"
   },
