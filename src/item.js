@@ -148,7 +148,7 @@ let Item = Model.extend('Item', function() {
       enumerable: true
     });
 
-    this.on('didDelete', async function() {
+    this.on('willDelete', async function() {
       if (this.repository.isLocal) {
         let items = await this[name].findItems();
         for (let item of items) await item.delete({ source: 'computer' });
