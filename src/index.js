@@ -81,11 +81,10 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
       await item.transaction(async function(savingItem) {
         await savingItem.emit('willSave', options);
         savingItem.validate();
-        let repository = savingItem.repository;
-        await repository.putItem(savingItem, options);
-        await savingItem.emit('didSave', options);
-        repository.log.debug(savingItem.class.name + '#' + savingItem.primaryKeyValue + ' saved to ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
+        await savingItem.repository.putItem(savingItem, options);
       });
+      await item.emit('didSave', options);
+      this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' saved to ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
     } finally {
       item.isSaving = false;
     }
@@ -100,13 +99,12 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
       item.isDeleting = true;
       await item.transaction(async function(deletingItem) {
         await deletingItem.emit('willDelete', options);
-        let repository = deletingItem.repository;
-        hasBeenDeleted = await repository.deleteItem(deletingItem, options);
-        if (hasBeenDeleted) {
-          await deletingItem.emit('didDelete', options);
-          repository.log.debug(deletingItem.class.name + '#' + deletingItem.primaryKeyValue + ' deleted from ' + (repository.isLocal ? 'local' : 'remote') + ' repository');
-        }
+        hasBeenDeleted = await deletingItem.repository.deleteItem(deletingItem, options);
       });
+      if (hasBeenDeleted) {
+        await item.emit('didDelete', options);
+        this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' deleted from ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
+      }
     } finally {
       item.isDeleting = false;
     }
