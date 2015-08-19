@@ -89,7 +89,7 @@ let Item = Model.extend('Item', function() {
     if (!(typeof name === 'string' && name)) throw new Error('name is missing');
     let prop = this.addProperty(name, type);
     if (options.isAuto) {
-      this.on('willSave', async function() {
+      this.on('willSave', function() {
         if (this.repository.isLocal) {
           this.generateKeyValue(prop);
         }
@@ -100,7 +100,7 @@ let Item = Model.extend('Item', function() {
 
   this.addCreatedOnProperty = function(name = 'createdOn') {
     let prop = this.addProperty(name, Date);
-    this.on('willSave', async function() {
+    this.on('willSave', function() {
       if (this.repository.isLocal) {
         if (!this[name]) this[name] = new Date();
       }
@@ -110,7 +110,7 @@ let Item = Model.extend('Item', function() {
 
   this.addUpdatedOnProperty = function(name = 'updatedOn') {
     let prop = this.addProperty(name, Date);
-    this.on('willSave', async function(options) {
+    this.on('willSave', function(options) {
       if (!this.repository.isLocal) return;
       if (options.source === 'computer' || options.source === 'localSynchronizer' || options.source === 'remoteSynchronizer' || options.source === 'archive') return;
       this[name] = new Date();
@@ -195,7 +195,7 @@ let Item = Model.extend('Item', function() {
     this.isModified = false;
   });
 
-  this.on('didSave', async function() {
+  this.on('didSave', function() {
     this.isNew = false;
     this.isModified = false;
   });
