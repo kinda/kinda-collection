@@ -186,20 +186,6 @@ let Item = Model.extend('Item', function() {
     }
   });
 
-  this.on('didCreateOrUnserializeItem', function() {
-    this.isModified = false;
-  });
-
-  this.on('didLoad', function() {
-    this.isNew = false;
-    this.isModified = false;
-  });
-
-  this.on('didSave', function() {
-    this.isNew = false;
-    this.isModified = false;
-  });
-
   this.on('didChange', function() {
     this.isModified = true;
   });

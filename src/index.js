@@ -61,7 +61,6 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     if (this.fixedForeignKey) {
       item[this.fixedForeignKey.name] = this.fixedForeignKey.value;
     }
-    item.emit('didCreateOrUnserializeItem');
     return item;
   };
 
@@ -69,7 +68,11 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
     item = await this.repository.getItem(item, options);
-    if (item) item.emit('didLoad', options);
+    if (item) {
+      item.isNew = false;
+      item.isModified = false;
+      item.emit('didLoad', options);
+    }
     return item;
   };
 
@@ -83,6 +86,8 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
         savingItem.validate();
         await savingItem.repository.putItem(savingItem, options);
       });
+      item.isNew = false;
+      item.isModified = false;
       await item.emit('didSave', options);
       this.repository.log.debug(item.class.name + '#' + item.primaryKeyValue + ' saved to ' + (this.repository.isLocal ? 'local' : 'remote') + ' repository');
     } finally {
@@ -118,7 +123,11 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     items = items.map(this.normalizeItem.bind(this));
     options = this.normalizeOptions(options);
     items = await this.repository.getItems(items, options);
-    for (let item of items) item.emit('didLoad', options);
+    for (let item of items) {
+      item.isNew = false;
+      item.isModified = false;
+      item.emit('didLoad', options);
+    }
     return items;
   };
 
@@ -126,7 +135,11 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
     let items = await this.repository.findItems(this, options);
-    for (let item of items) item.emit('didLoad', options);
+    for (let item of items) {
+      item.isNew = false;
+      item.isModified = false;
+      item.emit('didLoad', options);
+    }
     return items;
   };
 
@@ -140,6 +153,8 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     options = this.normalizeOptions(options);
     options = this.injectFixedForeignKey(options);
     await this.repository.forEachItems(this, options, async function(item) {
+      item.isNew = false;
+      item.isModified = false;
       item.emit('didLoad', options);
       await fn.call(this, item);
     }, thisArg);
