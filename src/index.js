@@ -71,7 +71,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     if (item) {
       item.isNew = false;
       item.isModified = false;
-      item.emit('didLoad', options);
+      // item.emit('didLoad', options);
     }
     return item;
   };
@@ -126,7 +126,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     for (let item of items) {
       item.isNew = false;
       item.isModified = false;
-      item.emit('didLoad', options);
+      // item.emit('didLoad', options);
     }
     return items;
   };
@@ -138,7 +138,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     for (let item of items) {
       item.isNew = false;
       item.isModified = false;
-      item.emit('didLoad', options);
+      // item.emit('didLoad', options);
     }
     return items;
   };
@@ -155,7 +155,7 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
     await this.repository.forEachItems(this, options, async function(item) {
       item.isNew = false;
       item.isModified = false;
-      item.emit('didLoad', options);
+      // item.emit('didLoad', options);
       await fn.call(this, item);
     }, thisArg);
   };
