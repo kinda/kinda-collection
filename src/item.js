@@ -18,6 +18,12 @@ let Item = Model.extend('Item', function() {
     superUnserializer.call(this, json);
   };
 
+  this.clone = function() {
+    let json = this.serialize();
+    let item = this.collection.unserializeItem(json);
+    return item;
+  };
+
   Object.defineProperty(this, 'collection', {
     get() {
       return this._collection;
