@@ -79,11 +79,12 @@ let KindaCollection = KindaObject.extend('KindaCollection', function() {
   this.putItem = async function(item, options) {
     item = this.normalizeItem(item);
     options = this.normalizeOptions(options);
+    let validate = options.validate != null ? options.validate : true;
     try {
       item.isSaving = true;
       await item.transaction(async function(savingItem) {
         await savingItem.emit('willSave', options);
-        savingItem.validate();
+        if (validate) savingItem.validate();
         await savingItem.repository.putItem(savingItem, options);
       });
       item.isNew = false;
