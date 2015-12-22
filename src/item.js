@@ -197,7 +197,7 @@ let Item = Model.extend('Item', function() {
   });
 
   this.generateKeyValue = function(prop) {
-    if (_.isString(prop)) prop = this.getProperty(prop);
+    if (_.isString(prop)) prop = this.properties[prop];
     if (!prop) throw new Error('unknown property');
     if (this[prop.name]) return; // a value has already been generated
     let val;
